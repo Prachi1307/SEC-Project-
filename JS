@@ -6,7 +6,7 @@ const BOT_MSGS = [
   "Hi, how are you?",
   "How I can help you?",
   "I like to play games... But I don't know how to play!",
-  "It was talking to you. :))",
+  "It was nice talking to you. :))",
   "I feel sleepy! :("
 ];
 
