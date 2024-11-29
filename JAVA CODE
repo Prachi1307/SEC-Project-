@@ -1,0 +1,237 @@
+JDBC Database Connection
+import java.sql.*;
+
+public class DatabaseConnection {
+    
+    // Database credentials
+    private static final String URL = "jdbc:mysql://localhost:3306/chat_app";
+    private static final String USER = "root";  // Your MySQL username
+    private static final String PASSWORD = "password";  // Your MySQL password
+
+    // Get a connection to the database
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}
+User Class (Represent User Data)
+public class User {
+    private int userId;
+    private String username;
+    private String password;
+
+    // Constructor
+    public User(int userId, String username, String password) {
+        this.userId = userId;
+        this.username = username;
+        this.password = password;
+    }
+
+    // Getters and Setters
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+}
+User Data Access Object (DAO)
+import java.sql.*;
+
+public class UserDao {
+
+    // Register a new user
+    public static boolean registerUser(String username, String password) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, username);
+                stmt.setString(2, password);  // In real applications, password should be hashed
+                int rows = stmt.executeUpdate();
+                return rows > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Login a user
+    public static User loginUser(String username, String password) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, username);
+                stmt.setString(2, password);  // In real applications, compare hashed passwords
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    int userId = rs.getInt("user_id");
+                    return new User(userId, username, password);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;  // User not found
+    }
+}
+Message Class (Represent Message Data)
+public class Message {
+    private int senderId;
+    private int receiverId;
+    private String message;
+    private Timestamp timestamp;
+
+    // Constructor
+    public Message(int senderId, int receiverId, String message, Timestamp timestamp) {
+        this.senderId = senderId;
+        this.receiverId = receiverId;
+        this.message = message;
+        this.timestamp = timestamp;
+    }
+
+    // Getters and Setters
+    public int getSenderId() {
+        return senderId;
+    }
+
+    public void setSenderId(int senderId) {
+        this.senderId = senderId;
+    }
+
+    public int getReceiverId() {
+        return receiverId;
+    }
+
+    public void setReceiverId(int receiverId) {
+        this.receiverId = receiverId;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
+    }
+}
+Message Data Access Object (DAO)
+import java.sql.*;
+import java.util.*;
+
+public class MessageDao {
+
+    // Send a message
+    public static boolean sendMessage(int senderId, int receiverId, String message) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, senderId);
+                stmt.setInt(2, receiverId);
+                stmt.setString(3, message);
+                int rows = stmt.executeUpdate();
+                return rows > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Retrieve chat history between two users
+    public static List<Message> getMessages(int senderId, int receiverId) {
+        List<Message> messages = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT * FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY timestamp ASC";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, senderId);
+                stmt.setInt(2, receiverId);
+                stmt.setInt(3, receiverId);
+                stmt.setInt(4, senderId);
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    Message msg = new Message(
+                        rs.getInt("sender_id"),
+                        rs.getInt("receiver_id"),
+                        rs.getString("message"),
+                        rs.getTimestamp("timestamp")
+                    );
+                    messages.add(msg);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return messages;
+    }
+}
+Chat Application (Main Logic)
+import java.util.*;
+
+public class ChatApp {
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // User Registration/Login
+        System.out.println("Welcome to the Chat Application!");
+        System.out.print("1. Register\n2. Login\nChoose an option: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();  // Consume newline character
+
+        String username, password;
+        User user = null;
+
+        if (choice == 1) {
+            System.out.print("Enter username: ");
+            username = scanner.nextLine();
+            System.out.print("Enter password: ");
+            password = scanner.nextLine();
+            if (UserDao.registerUser(username, password)) {
+                System.out.println("Registration successful!");
+            } else {
+                System.out.println("Registration failed!");
+                return;
+            }
+        } else if (choice == 2) {
+            System.out.print("Enter username: ");
+            username = scanner.nextLine();
+            System.out.print("Enter password: ");
+            password = scanner.nextLine();
+            user = UserDao.loginUser(username, password);
+            if (user != null) {
+                System.out.println("Login successful!");
+            } else {
+                System.out.println("Invalid credentials!");
+                return;
+            }
+        }
+
+        // Chat Interface
+        System.out.print("Enter recipient's username: ");
+        String recipient = scanner.nextLine();
+        int
