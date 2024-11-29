@@ -1,0 +1,28 @@
+-- Create the chat_app database
+CREATE DATABASE chat_app;
+
+-- Switch to the chat_app database
+USE chat_app;
+
+-- Create the users table
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,  -- Unique ID for each user
+    username VARCHAR(255) NOT NULL UNIQUE,   -- Username, must be unique
+    password VARCHAR(255) NOT NULL,          -- Password (you'll want to hash passwords in a real app)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Account creation timestamp
+);
+
+-- Create the messages table
+CREATE TABLE messages (
+    message_id INT AUTO_INCREMENT PRIMARY KEY,  -- Unique ID for each message
+    sender_id INT,                             -- ID of the user who sent the message
+    receiver_id INT,                           -- ID of the user who received the message
+    message TEXT,                               -- The message content
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Timestamp when the message was sent
+    FOREIGN KEY (sender_id) REFERENCES users(user_id),  -- Foreign key for sender
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id)  -- Foreign key for receiver
+);
+
+-- Insert sample users for testing
+INSERT INTO users (username, password) VALUES ('alice', 'password123');
+INSERT INTO users (username, password) VALUES ('bob', 'password456');
